@@ -5,9 +5,12 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <string.h>
-#include "nodes.h" //stores the
+#include "nodes.h" //stores the node parameters
 #include </usr/include/mysql/mysql.h>
 #include </usr/include/mysql/my_global.h>
+ #include <unistd.h>
+#include <stdlib.h>
+
 
 #define AF_NET 2
 #define TEN_M_KEY "TXT=makg2-10m"
@@ -30,7 +33,31 @@ char *getZuluTime(char *normaltime);//format is hh:mm:ss
 MYSQL *connect2db();
 
 int main(void){
+    pid_t pid = 0;
+    pid_t sid = 0;
+    pid =fork();
+    FILE *fp=NULL;
+    if(pid<0){
+        printf("Fork failed \n");
+        exit(1);
+    }
     
+    if(pid>0){
+         printf("pid of the child process is %d \n",pid);
+        exit(0);
+    }
+    umask(0);
+    
+    sid =setsid();
+    
+    if(sid < 0)
+    {
+        exit(1);
+    }
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    fp =fopen("listenerlogs.txt","w+");
     unsigned int clientLen = sizeof(clientAddr);
     int listen_status;
     int socketId = socket(AF_NET,SOCK_STREAM,0);
@@ -65,27 +92,31 @@ int main(void){
     int i_counter=0;
     
     if(bind_status != -1){
-        printf("Binded successfully to port %d \n",addr.sin_port);
+        fprintf(fp,"Binded successfully to port %d \n",addr.sin_port);
         connection = connect2db();
         listen_status = listen(socketId, 128);
         if(listen_status != -1){
-            printf("Now the server is listening \n");
+            fprintf(fp,"Now the server is listening \n");
             int clientSockId = accept(socketId,(struct sockadrr *) &clientAddr,&clientLen);
             
-            printf("The client socket id is %d\n",clientSockId);
+            fprintf(fp,"The client socket id is %d\n",clientSockId);
             int recvMsgSize;
             if(clientSockId != -1){
                 while(1){
                     recvMsgSize = recv(clientSockId, buffer, RCVBUFSIZE, 0); 
                     if(recvMsgSize>0){
-                       // printf("%s",buffer);
+                       // fprintf(fp,"%s",buffer);
                         counter=0;
                         if(strstr(buffer,TEN_M_KEY)!=NULL){
                             //when it's 10 meter 
                             process10meterString(buffer);
+                             fprintf(fp,"\n10m: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s ",ten_meter_node.date_10m,ten_meter_node.time_10m,ten_meter_node.gw_lat_10m,ten_meter_node.gw_long_10m,ten_meter_node.ps_10m,ten_meter_node.t_10m,
+                                ten_meter_node.e64_10m,ten_meter_node.v_mcu_10m,ten_meter_node.v_in_10m,ten_meter_node.v_a1_10m,ten_meter_node.v_a2_10m,ten_meter_node.v_a3_10m,
+                                ten_meter_node.ttl_10m,ten_meter_node.rssi_10m,ten_meter_node.lqi_10m,ten_meter_node.drp_10m
+                                );
                              sprintf(station_Number_query,station_Number_template,ten_meter_node.gw_lat_10m,ten_meter_node.gw_long_10m);
                             if(mysql_query(connection,station_Number_query)){
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                             }
                             res = mysql_use_result(connection);
                             i_counter=0;
@@ -99,19 +130,23 @@ int main(void){
                             sprintf(status_query,status_query_template,ten_meter_node.v_mcu_10m,ten_meter_node.v_in_10m,ten_meter_node.rssi_10m,ten_meter_node.lqi_10m,ten_meter_node.drp_10m,ten_meter_node.date_10m,ten_meter_node.time_10m,ten_meter_node.txt_10m,ten_meter_node.e64_10m,station_Number);
                             
                             if (mysql_query(connection,status_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             sprintf(wind_query,wind_template,ten_meter_node.date_10m,station_Number,getZuluTime(ten_meter_node.time_10m),ten_meter_node.v_a1_10m,ten_meter_node.v_a2_10m);
-                            printf("\n%s\n",wind_query);
+                            fprintf(fp,"\n%s\n",wind_query);
                             
                         }
                         else if(strstr(buffer,TWO_M_KEY)!=NULL){
                             process2meterString(buffer);
+                            fprintf(fp,"\n2m: %s %s %s  %s %s %s %s %s %s %s %s",two_meter_node.date_2m,two_meter_node.time_2m,
+                                two_meter_node.gw_lat_2m,two_meter_node.gw_long_2m,two_meter_node.v_mcu_2m,two_meter_node.v_in_2m,
+                                 two_meter_node.t_sht2x_2m,two_meter_node.rh_sht2x_2m,two_meter_node.ttl_2m,two_meter_node.rssi_2m,two_meter_node.lqi_2m
+                                 );
                             //generating the query string to get the station Number
                             sprintf(station_Number_query,station_Number_template,two_meter_node.gw_lat_2m,two_meter_node.gw_long_2m);
                             
                             if(mysql_query(connection,station_Number_query)){
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                             }
                             res = mysql_use_result(connection);
                             i_counter=0;
@@ -126,7 +161,7 @@ int main(void){
                             sprintf(status_query,status_query_template,two_meter_node.v_mcu_2m,two_meter_node.v_in_2m,two_meter_node.rssi_2m,two_meter_node.lqi_2m,two_meter_node.drp_2m,two_meter_node.date_2m,two_meter_node.time_2m,two_meter_node.txt_2m,two_meter_node.e64_2m,station_Number);
                             //inserting the node status information
                             if (mysql_query(connection,status_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             
                             //calculating the dew_point
@@ -137,16 +172,21 @@ int main(void){
                             wet_bulb = ((2*dew_point)+dry_bulb)/3;
                             //generating the query to insert humidity and temperature                     
                             sprintf(temp_humid_query,temp_humid_template,two_meter_node.date_2m,station_Number,getZuluTime(two_meter_node.time_2m),dry_bulb,wet_bulb);
-                            printf("\n%s\n",temp_humid_query);
+                            fprintf(fp,"\n%s\n",temp_humid_query);
                             if (mysql_query(connection,temp_humid_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             }
                         else if(strstr(buffer,GROUND_KEY)!=NULL){
                             processGroundNodeString(buffer);
+                            fprintf(fp,"\ngnd: %s  %s %s  %s %s %s %s %s %s %s %s %s %s",ground_node.date_gnd,ground_node.time_gnd,
+                            ground_node.gw_lat_gnd,ground_node.gw_long_gnd,ground_node.ps_gnd,ground_node.p0_gnd,
+                             ground_node.up_gnd,ground_node.p0_lst60_gnd,ground_node.v_a1_gnd,ground_node.v_a2_gnd,
+                             ground_node.ttl_gnd,ground_node.rssi_gnd,ground_node.lqi_gnd
+                             );//printing the captured data
                             sprintf(station_Number_query,station_Number_template,ground_node.gw_lat_gnd,ground_node.gw_long_gnd);
                             if(mysql_query(connection,station_Number_query)){
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                             }
                             res = mysql_use_result(connection);
                             i_counter=0;
@@ -160,19 +200,24 @@ int main(void){
                             sprintf(status_query,status_query_template,ground_node.v_mcu_gnd,ground_node.v_in_gnd,ground_node.rssi_gnd,ground_node.lqi_gnd,ground_node.drp_gnd,ground_node.date_gnd,ground_node.time_gnd,ground_node.txt_gnd,ground_node.e64_gnd,station_Number);
                             
                             if (mysql_query(connection,status_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             sprintf(soil_rain_query,soil_rain_template,ground_node.date_gnd,station_Number,getZuluTime(ground_node.time_gnd),ground_node.v_a2_gnd,ground_node.v_a1_gnd,ground_node.p0_lst60_gnd);
-                            printf("\n%s\n",soil_rain_query);
+                            fprintf(fp,"\n%s\n",soil_rain_query);
                             if (mysql_query(connection,temp_humid_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             }
                         else if(strstr(buffer,SINK_KEY)!=NULL){
                             processSinkNodeString(buffer);
+                            fprintf(fp,"\nsink: %s %s %s  %s %s %s %s %s %s %s %s %s %s %s %s",sink_node.date_sink,sink_node.time_sink,
+                            sink_node.gw_lat_sink,sink_node.gw_long_sink,sink_node.ps_sink,sink_node.t_sink,sink_node.up_sink,
+                             sink_node.e64_sink,sink_node.v_mcu_sink,sink_node.v_in_sink,sink_node.p_ms5611_sink,
+                             sink_node.ttl_sink,sink_node.rssi_sink,sink_node.lqi_sink,sink_node.drp_sink
+                             );
                             sprintf(station_Number_query,station_Number_template,sink_node.gw_lat_sink,sink_node.gw_long_sink);
                             if(mysql_query(connection,station_Number_query)){
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                             }
                             res = mysql_use_result(connection);
                             i_counter=0;
@@ -185,12 +230,12 @@ int main(void){
                             sprintf(status_query,status_query_template,sink_node.v_mcu_sink,sink_node.v_in_sink,sink_node.rssi_sink,sink_node.lqi_sink,sink_node.drp_sink,sink_node.date_sink,sink_node.time_sink,sink_node.txt_sink,sink_node.e64_sink,station_Number);
                             
                             if (mysql_query(connection,status_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                             sprintf(pressure_query,pressure_template,sink_node.date_sink,station_Number,getZuluTime(sink_node.time_sink),sink_node.up_sink);
-                             printf("\n%s\n",pressure_query);
+                             fprintf(fp,"\n%s\n",pressure_query);
                             if (mysql_query(connection,pressure_query)) {
-                                fprintf(stderr, "%s\n", mysql_error(connection));
+                                fprintf(fp, "%s\n", mysql_error(connection));
                              }
                         }
                             else{
@@ -202,7 +247,7 @@ int main(void){
             }
         }
         else{
-            printf("Failed to listen\n");
+            fprintf(fp,"Failed to listen\n");
         }
     }
     
@@ -268,32 +313,29 @@ void process2meterString(char buffer[]){
               }
               
           } 
-//                              	printf("%d =%d \n",max,counter);
+//                              	fprintf(fp,"%d =%d \n",max,counter);
            counter++;
-          //printf("%d =%d \n",max,counter);
+          //fprintf(fp,"%d =%d \n",max,counter);
           }
-     // printf("%d here",counter);
-      printf("\n2m: %s %s %s  %s %s %s %s %s %s %s %s",two_meter_node.date_2m,two_meter_node.time_2m,
-             two_meter_node.gw_lat_2m,two_meter_node.gw_long_2m,two_meter_node.v_mcu_2m,two_meter_node.v_in_2m,
-              two_meter_node.t_sht2x_2m,two_meter_node.rh_sht2x_2m,two_meter_node.ttl_2m,two_meter_node.rssi_2m,two_meter_node.lqi_2m
-              );
-      printf(" \n");
+     // fprintf(fp,"%d here",counter);
+      
+    
 }
 MYSQL *connect2db(){
    MYSQL *conn;
    MYSQL_RES *res;
    MYSQL_ROW row;
 
-   char *server = "localhost";
-   char *user = "XXXXX";//username
-   char *password = "XXXXXX"; //password
-   char *database = "XXXXXX";//database name 
+   char *server = "server address";//server address
+   char *user = "username";//the username
+   char *password = "password"; //the password
+   char *database = "database_name";
    conn = mysql_init(NULL);
 
    /* Connect to database */
    if (!mysql_real_connect(conn, server,
          user, password, database, 0, NULL, 0)) {
-      fprintf(stderr, "%s\n", mysql_error(conn));
+     // fprintf(fp, "%s\n", mysql_error(conn));
       return NULL;
    }
    else{
@@ -369,16 +411,13 @@ void process10meterString(char buffer[]){
             }
             
         } 
-//                              	printf("%d =%d \n",max,counter);
+//                              	fprintf(fp,"%d =%d \n",max,counter);
          counter++;
-        //printf("%d =%d \n",max,counter);
+        //fprintf(fp,"%d =%d \n",max,counter);
         }
-   // printf("%d here",counter);
-    printf("\n10m: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s ",ten_meter_node.date_10m,ten_meter_node.time_10m,ten_meter_node.gw_lat_10m,ten_meter_node.gw_long_10m,ten_meter_node.ps_10m,ten_meter_node.t_10m,
-            ten_meter_node.e64_10m,ten_meter_node.v_mcu_10m,ten_meter_node.v_in_10m,ten_meter_node.v_a1_10m,ten_meter_node.v_a2_10m,ten_meter_node.v_a3_10m,
-            ten_meter_node.ttl_10m,ten_meter_node.rssi_10m,ten_meter_node.lqi_10m,ten_meter_node.drp_10m
-            );
-    printf(" \n");
+   // fprintf(fp,"%d here",counter);
+   
+    
 }
 void processSinkNodeString(char buffer[]){
         //when it's sink node
@@ -453,17 +492,13 @@ void processSinkNodeString(char buffer[]){
                 sink_node.drp_sink = findKeyValue(reports[counter],DRP_SINK_KEY);
             }
         } 
-//                              	printf("%d =%d \n",max,counter);
+//                              	fprintf(fp,"%d =%d \n",max,counter);
          counter++;
-        //printf("%d =%d \n",max,counter);
+        //fprintf(fp,"%d =%d \n",max,counter);
         }
-   // printf("%d here",counter);
-    printf("\nsink: %s %s %s  %s %s %s %s %s %s %s %s %s %s %s %s",sink_node.date_sink,sink_node.time_sink,
-           sink_node.gw_lat_sink,sink_node.gw_long_sink,sink_node.ps_sink,sink_node.t_sink,sink_node.up_sink,
-            sink_node.e64_sink,sink_node.v_mcu_sink,sink_node.v_in_sink,sink_node.p_ms5611_sink,
-            sink_node.ttl_sink,sink_node.rssi_sink,sink_node.lqi_sink,sink_node.drp_sink
-            );
-    printf(" \n");
+   // fprintf(fp,"%d here",counter);
+    
+  
 }
 void processGroundNodeString(char buffer[]){
     //when it's ground node
@@ -543,17 +578,12 @@ void processGroundNodeString(char buffer[]){
             }
             
         } 
-//                              	printf("%d =%d \n",max,counter);
+//                              	fprintf(fp,"%d =%d \n",max,counter);
          counter++;
-        //printf("%d =%d \n",max,counter);
+        //fprintf(fp,"%d =%d \n",max,counter);
         }
-   // printf("%d here",counter);
-    printf("\ngnd: %s  %s %s  %s %s %s %s %s %s %s %s %s %s",ground_node.date_gnd,ground_node.time_gnd,
-           ground_node.gw_lat_gnd,ground_node.gw_long_gnd,ground_node.ps_gnd,ground_node.p0_gnd,
-            ground_node.up_gnd,ground_node.p0_lst60_gnd,ground_node.v_a1_gnd,ground_node.v_a2_gnd,
-            ground_node.ttl_gnd,ground_node.rssi_gnd,ground_node.lqi_gnd
-            );
-    printf(" \n");
+   // fprintf(fp,"%d here",counter);
+    
 }
 char *findKeyValue(char *substr,char *key){
     //the substring should be of the form key=value
