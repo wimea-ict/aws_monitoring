@@ -3,6 +3,6 @@ The aws monitoring process involves programs/scripts that collect and insert the
 
 The programs(tcpListener.c, nodes.h, config.h) implemented in C are responsible for receiving the data from the nodes and inserting it into the database.[See their individual descriptions].
 
-The php programs(awsmonitor.php and reportAwsIssues.php) are responsible for identifying and reporting issues with data in the nodestatus and observationslip. 
+The php programs(awsmonitor.php and reportAwsIssues.php) are responsible for identifying and reporting issues with data in the nodestatus and observationslip. [See their individual descriptions]
 
 
