@@ -34,7 +34,6 @@
         $GLOBALS["TWO_M_KEY"] ="2m";
         $GLOBALS["GROUND_NODE_KEY"] ="gnd";
         $GLOBALS["SINK_NODE_KEY"]="sink";
-        
         date_default_timezone_set("UTC"); //all the times here are in UTC
         
 	$con = new mysqli("localhost", "username", "password", "mobilewimeadb") or die("failed to connect");
