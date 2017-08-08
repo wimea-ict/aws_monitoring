@@ -37,7 +37,7 @@
         
         date_default_timezone_set("UTC"); //all the times here are in UTC
         
-	$con = new mysqli("localhost", "jmuhumuza", "joshua", "mobilewimeadb") or die("failed to connect");
+	$con = new mysqli("localhost", "username", "password", "mobilewimeadb") or die("failed to connect");
         $date_today = gmdate("Y-m-d",time());//the current date in UTC
         $time_6_mins_ago =gmdate("H:i:s",time()-$time_range);//the time in UTC
 	$sql ="SELECT * FROM nodestatus WHERE nodestatus.date like '$date_today' AND nodestatus.time >='$time_6_mins_ago' AND StationNumber='$STATION_NUMBER' ORDER BY nodestatus.time DESC";
