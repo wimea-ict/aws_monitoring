@@ -1,3 +1,13 @@
+#define TEN_M_KEY "10m"
+#define TWO_M_KEY "2m"
+#define GROUND_KEY "gnd"
+#define SINK_KEY "sink"
+
+/*#define TEN_M_KEY "TXT=makg2-10m"
+#define TWO_M_KEY "TXT=makg2-2m"
+#define GROUND_KEY "TXT=makg2-gnd"
+#define SINK_KEY "TXT=makg2-sink"*/
+
 #define UT_2M_KEY "UT"
 #define GW_LAT_2M_KEY "GW_LAT"
 #define GW_LONG_2M_KEY "GW_LON"
