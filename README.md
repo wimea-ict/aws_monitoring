@@ -1,4 +1,4 @@
-# aws_monitoring
+# Aws Data Receiever
 
 This AwsDataReceiver is one of the components of the Aws Monitor System. Read about the whole project here
 http://kibsys.com/wimeaict-aws-monitoring/
