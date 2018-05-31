@@ -17,14 +17,10 @@ To install on the Mysql C connector on linux use the command
   $sudo apt-get install libmysqlclient libmysqlclient-dev
 
 Once the nodes.h, config.h have been configured, the tcpListener can be compiled using the command:
+gcc -o AwsDataReceiver AwsDataReceiver.c  -I/usr/include/mysql  -lmysqlclient -lz -lpthread 
 
-  gcc -o tcpListener tcpListener.c $(mysql_config --cflags --libs)
+The command creates an executable AwsDataReceiver which can be executed by running ./AwsDataReceiver on the terminal
 
-The script can then be executed by using the command ./tcpListener 
-
-The listenerlogs.txt is created in the folder where the executable resides and can be read to see an outputs from the daemon process.
-
-
-
+Make sure to create a file config.h by copying example.config.h and make the changes for the database access
 
 
