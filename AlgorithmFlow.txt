@@ -1,0 +1,48 @@
+Main Program:
+	Start
+		Load configurations for all stations from the WIMEA-ICT database
+		Initialize socket to receive connections on port 10020
+	while(true)
+		wait for a socket connection from a station
+		create a connection handler thread when connection is made
+	EndWhile
+	Stop
+
+Connection Handler Thread
+	Create a large buffer 
+	While(true)
+		Receive node report
+		Add report to the buffer
+		If the buffer is full?
+			Pass the buffer to a new Data Storing Thread
+			Clear the buffer
+		Else If node stops sending or times out?
+			Pass the buffer to a new Data Storing Thread
+			Clear the buffer
+			break
+		EndIf
+	EndWhile
+	Destroy Thread
+
+Data Storing Thread
+	For each report in the passed buffer
+		Check TXT value to identify source station and node
+		If no matching station?
+		ignore report
+		continue
+		else
+	For each expected parameter in the report from the report
+		extract parameter value from the report using the parameter key
+		store the parameter value in a nodes_values array
+	EndFor
+	Store node status information into the node status table
+	If any weather parameter is to be calculated?
+		Make calculation using values from nodes_status value
+	Store sensor values into observationSlip Table
+	EndFor
+	Destroy thread.
+
+
+
+
+
